@@ -6,9 +6,8 @@ from database import init_db, get_db_connection
 app = Flask(__name__)
 app.secret_key = 'super_gizli_anahtar_degistirilebilir' # Flash mesajları (uyarılar) için gerekli
 
-# Veritabanı dosyamız yoksa oluşturalım
-if not os.path.exists('app.db'):
-    init_db()
+# Veritabanı tablolarını oluştur (IF NOT EXISTS olduğu için güvenli)
+init_db()
 
 @app.route('/')
 def index():
@@ -254,7 +253,7 @@ def add_lesson():
         # Çakışma kontrolü (Basit algoritma)
         # Veritabanındaki tüm dersleri çekip tarih/saat aralıklarına bakıyoruz
         # (SQLite'da datetime işlemleri string bazlı yapıldığı için Python tarafında kontrol etmek daha güvenli)
-        existing_lessons = conn.execute('SELECT lesson_date, duration_minutes FROM lessons WHERE status != "iptal"').fetchall()
+        existing_lessons = conn.execute("SELECT lesson_date, duration_minutes FROM lessons WHERE status != 'iptal'").fetchall()
         
         conflict = False
         for el in existing_lessons:
@@ -398,3 +397,4 @@ def add_resource():
 if __name__ == '__main__':
     # Bütün cihazlardan (ağ içi) erişim için host='0.0.0.0'
     app.run(host='0.0.0.0', port=5000, debug=True)
+
