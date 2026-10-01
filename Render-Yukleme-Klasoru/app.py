@@ -64,13 +64,17 @@ def index():
         month_name = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'][m-1]
         chart_labels.append(f"{month_name} {y}")
         chart_data.append(income)
-        
+    
+    # Hızlı notları getir
+    quick_notes = conn.execute('SELECT * FROM quick_notes ORDER BY created_at DESC').fetchall()
+    
     conn.close()
     return render_template('index.html', 
                            todays_lessons=todays_lessons, 
                            total_pending=total_pending,
                            chart_labels=chart_labels,
-                           chart_data=chart_data)
+                           chart_data=chart_data,
+                           quick_notes=quick_notes)
 
 @app.route('/students')
 def students():
@@ -394,7 +398,28 @@ def add_resource():
         
     return redirect(url_for('resources'))
 
+@app.route('/notes/add', methods=['POST'])
+def add_note():
+    content = request.form.get('content')
+    if not content or not content.strip():
+        flash('Not içeriği boş olamaz.', 'danger')
+    else:
+        conn = get_db_connection()
+        conn.execute('INSERT INTO quick_notes (content) VALUES (%s)', (content.strip(),))
+        conn.commit()
+        conn.close()
+        flash('Not eklendi.', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/notes/delete/<int:note_id>', methods=['POST'])
+def delete_note(note_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM quick_notes WHERE id = %s', (note_id,))
+    conn.commit()
+    conn.close()
+    flash('Not silindi.', 'warning')
+    return redirect(url_for('index'))
+
 if __name__ == '__main__':
     # Bütün cihazlardan (ağ içi) erişim için host='0.0.0.0'
     app.run(host='0.0.0.0', port=5000, debug=True)
-
