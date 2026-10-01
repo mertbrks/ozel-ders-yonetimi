@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-house-door text-light me-2"></i>Bugün</h2>
+</div>
+
+<div class="row">
+    <!-- Bugünkü Dersler Kutusu -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-lg h-100" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 15px;">
+            <div class="card-body p-4 text-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title fw-bold mb-0"><i class="bi bi-calendar-check me-2"></i>Bugünkü Dersler</h5>
+                    <span class="badge bg-light text-dark rounded-pill fs-6 px-3">{{ todays_lessons|length }}</span>
+                </div>
+                
+                <div class="mt-4">
+                    {% if todays_lessons %}
+                    <ul class="list-group list-group-flush rounded">
+                        {% for lesson in todays_lessons %}
+                        <li class="list-group-item bg-light text-dark mb-2 rounded shadow-sm d-flex justify-content-between align-items-center">
+                            <div>
+                                <fw-bold>{{ lesson.full_name }}</fw-bold><br>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ lesson.lesson_date.split('T')[1] }}</small>
+                            </div>
+                            {% if lesson.status == 'planlandi' %}
+                            <span class="badge bg-primary rounded-pill">Planlandı</span>
+                            {% elif lesson.status == 'yapildi' %}
+                            <span class="badge bg-success rounded-pill">Yapıldı</span>
+                            {% else %}
+                            <span class="badge bg-danger rounded-pill">İptal</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="card-text text-light" style="opacity: 0.9;">Bugün için henüz planlanmış dersiniz yok.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-footer border-0 bg-transparent text-end pb-3 pe-4">
+                <a href="{{ url_for('schedule') }}" class="btn btn-sm btn-outline-light rounded-pill px-3">Takvime Git <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bekleyen Ödemeler Kutusu -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-0 shadow-lg h-100" style="background: linear-gradient(135deg, #b22222 0%, #d73a49 100%); border-radius: 15px;">
+            <div class="card-body p-4 text-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title fw-bold mb-0"><i class="bi bi-wallet2 me-2"></i>Bekleyen Ödemeler</h5>
+                    <span class="badge bg-light text-dark rounded-pill fs-6 px-3">₺{{ total_pending }}</span>
+                </div>
+                
+                <div class="mt-4">
+                    {% if total_pending > 0 %}
+                    <h2 class="display-5 fw-bold mb-0">₺{{ total_pending }}</h2>
+                    <p class="card-text text-light mt-2" style="opacity: 0.9;">Tahsil edilmeyi bekleyen toplam bakiye.</p>
+                    {% else %}
+                    <h2 class="display-5 fw-bold mb-0">₺0</h2>
+                    <p class="card-text text-light mt-2" style="opacity: 0.9;">Tüm ödemeleriniz alınmış veya henüz borç kaydedilmemiş. Harika!</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-footer border-0 bg-transparent text-end pb-3 pe-4">
+                <a href="{{ url_for('payments') }}" class="btn btn-sm btn-outline-light rounded-pill px-3">Ödemelere Git <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- İstatistik Grafiği -->
+<div class="row mt-2">
+    <div class="col-12 mb-4">
+        <div class="card border-0 shadow-sm h-100 bg-dark" style="border-radius: 15px;">
+            <div class="card-body p-4 text-white">
+                <h5 class="card-title fw-bold mb-4"><i class="bi bi-bar-chart-fill text-info me-2"></i>Son 6 Aylık Gelir (Tahsilat)</h5>
+                <div style="height: 300px; width: 100%;">
+                    <canvas id="incomeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById('incomeChart').getContext('2d');
+    
+    // Jinja template array'lerini JSON string'ine çevirerek JS değişkenlerine aktarıyoruz
+    const labels = {{ chart_labels | tojson }};
+    const data = {{ chart_data | tojson }};
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Aylık Gelir (TL)',
+                data: data,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                borderRadius: 4,
+                hoverBackgroundColor: 'rgba(54, 162, 235, 0.4)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                    ticks: { color: '#adb5bd' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#adb5bd' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#f8f9fa' }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-calendar-week text-warning me-2"></i>Ders Takvimi</h2>
+    <button type="button" class="btn btn-warning rounded-pill px-4 shadow-sm text-dark fw-bold" data-bs-toggle="modal" data-bs-target="#addLessonModal">
+      <i class="bi bi-plus-lg me-1"></i> Yeni Ders
+    </button>
+</div>
+
+<!-- FullCalendar için Konteyner -->
+<div class="card bg-dark border-secondary shadow-sm">
+    <div class="card-body p-2 p-md-4">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<!-- Yeni Ders Ekleme Modalı -->
+<div class="modal fade" id="addLessonModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title"><i class="bi bi-calendar-plus me-2 text-warning"></i>Yeni Ders Planla</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body">
+        <form action="{{ url_for('add_lesson') }}" method="POST">
+            <div class="mb-3">
+                <label class="form-label text-light">Öğrenci</label>
+                <select class="form-select bg-dark text-white border-secondary" name="student_id" required>
+                    <option value="">Seçiniz...</option>
+                    {% for student in students %}
+                    <option value="{{ student.id }}">{{ student.full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-light">Tarih ve Saat</label>
+                <input type="datetime-local" class="form-control bg-dark text-white border-secondary" name="lesson_date" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-light">Tekrar</label>
+                <select class="form-select bg-dark text-white border-secondary" name="weeks">
+                    <option value="1">Sadece 1 kez</option>
+                    <option value="4">4 Hafta Boyunca (Aynı gün/saat)</option>
+                    <option value="8">8 Hafta Boyunca (Aynı gün/saat)</option>
+                    <option value="12">12 Hafta Boyunca (Aynı gün/saat)</option>
+                </select>
+                <div class="form-text text-info"><small><i class="bi bi-info-circle"></i> Sistem çakışan haftaları eklemeyecek, boş olanları ekleyecektir.</small></div>
+            </div>
+            <div class="modal-footer border-secondary px-0 pb-0 mt-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                <button type="submit" class="btn btn-warning rounded-pill px-4 text-dark fw-bold">Planla</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ders Detay / Düzenleme Modalı (FullCalendar'dan tetiklenecek) -->
+<div class="modal fade" id="lessonDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="lessonDetailTitle">Ders Detayı</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body">
+        <form action="{{ url_for('update_lesson') }}" method="POST">
+            <input type="hidden" id="edit_lesson_id" name="lesson_id">
+            
+            <div class="mb-3">
+                <label class="form-label text-light">Durum</label>
+                <select class="form-select bg-dark text-white border-secondary" id="edit_status" name="status">
+                    <option value="planlandi">Planlandı</option>
+                    <option value="yapildi">Yapıldı</option>
+                    <option value="iptal">İptal Edildi</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-light">İşlenen Konu</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary" id="edit_topic" name="topic">
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-light">Verilen Ödev</label>
+                <input type="text" class="form-control bg-dark text-white border-secondary" id="edit_homework" name="homework">
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-light">Ders Notu / Öğrenci Durumu</label>
+                <textarea class="form-control bg-dark text-white border-secondary" id="edit_notes" name="notes" rows="3"></textarea>
+            </div>
+            
+            <div class="modal-footer border-secondary px-0 pb-0 mt-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">İptal</button>
+                <button type="submit" class="btn btn-primary rounded-pill px-4">Kaydet</button>
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var lessonDetailModal = new bootstrap.Modal(document.getElementById('lessonDetailModal'));
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: window.innerWidth < 768 ? 'listWeek' : 'timeGridWeek', // Mobilde liste, PC'de haftalık tablo
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listWeek'
+            },
+            buttonText: {
+                today: 'Bugün',
+                month: 'Ay',
+                week: 'Hafta',
+                list: 'Liste'
+            },
+            locale: 'tr',
+            themeSystem: 'bootstrap5',
+            events: '/api/lessons', // JSON verisini buradan çekecek
+            eventClick: function(info) {
+                // Tıklanan dersin detaylarını modal'a doldur
+                document.getElementById('lessonDetailTitle').innerText = info.event.title;
+                document.getElementById('edit_lesson_id').value = info.event.id;
+                document.getElementById('edit_status').value = info.event.extendedProps.status;
+                document.getElementById('edit_topic').value = info.event.extendedProps.topic;
+                document.getElementById('edit_homework').value = info.event.extendedProps.homework;
+                document.getElementById('edit_notes').value = info.event.extendedProps.notes;
+                
+                // Modalı aç
+                lessonDetailModal.show();
+            },
+            allDaySlot: false,
+            slotMinTime: '08:00:00', // Sabah 8'den başlasın
+            slotMaxTime: '23:00:00', // Gece 11'de bitsin
+            height: 'auto'
+        });
+        calendar.render();
+    });
+</script>
+
+<style>
+    /* FullCalendar Modern Koyu Tema */
+    .fc { font-family: 'Inter', sans-serif; }
+    .fc-theme-standard td, .fc-theme-standard th { border-color: #2c3034 !important; }
+    .fc-theme-standard .fc-scrollgrid { border-color: #2c3034 !important; border-radius: 8px; overflow: hidden; }
+    .fc-header-toolbar { margin-bottom: 1.5rem !important; }
+    .fc-toolbar-title { font-weight: 600; font-size: 1.25rem !important; color: #f8f9fa; }
+    .fc-button-primary {
+        background-color: #212529 !important;
+        border-color: #343a40 !important;
+        color: #adb5bd !important;
+        text-transform: capitalize;
+        border-radius: 6px !important;
+        padding: 0.4rem 1rem !important;
+        transition: all 0.2s;
+    }
+    .fc-button-primary:hover {
+        background-color: #343a40 !important;
+        color: #fff !important;
+    }
+    .fc-button-primary:not(:disabled).fc-button-active {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #fff !important;
+    }
+    .fc-col-header-cell-cushion { padding: 12px 4px !important; font-weight: 600; color: #adb5bd !important; text-decoration: none; }
+    .fc-daygrid-day-number { color: #f8f9fa !important; font-weight: 500; text-decoration: none; padding: 8px !important; }
+    .fc-day-today { background-color: rgba(13, 110, 253, 0.05) !important; }
+    .fc-timegrid-slot-label-cushion { color: #868e96 !important; font-size: 0.85rem; }
+    .fc-v-event { border-radius: 6px; border: none !important; padding: 2px 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .fc-event-title { font-weight: 600; font-size: 0.85rem; }
+    .fc-event-time { font-size: 0.75rem; opacity: 0.9; }
+    .fc-list-day-cushion { background-color: #212529 !important; }
+    .fc-list-event:hover td { background-color: #2c3034 !important; }
+    
+    /* Mobil Uyum Geliştirmeleri (Sıkışmayı Önleme) */
+    .fc-list-event-title {
+        white-space: normal !important; /* Metnin alt satıra geçmesine izin ver */
+        word-break: break-word; /* Çok uzun kelimeleri böl */
+    }
+    .fc-list-event-time {
+        white-space: nowrap !important; /* Saatlerin bölünmesini engelle */
+    }
+    @media (max-width: 768px) {
+        .fc-toolbar-title { font-size: 1.1rem !important; }
+        .fc-button { padding: 0.3rem 0.6rem !important; font-size: 0.85rem !important; }
+        .fc-list-event-title, .fc-list-event-time { font-size: 0.85rem !important; }
+    }
+</style>
+{% endblock %}

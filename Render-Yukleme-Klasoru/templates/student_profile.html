@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <a href="{{ url_for('students') }}" class="btn btn-outline-secondary rounded-pill px-3"><i class="bi bi-arrow-left me-1"></i>Geri Dön</a>
+    <a href="{{ wa_link }}" target="_blank" class="btn btn-success rounded-pill px-4 shadow-sm fw-bold"><i class="bi bi-whatsapp me-2"></i>Veliye Mesaj Gönder</a>
+</div>
+
+<div class="row">
+    <!-- Profil Özeti -->
+    <div class="col-md-4 mb-4">
+        <div class="card bg-dark border-secondary shadow-sm">
+            <div class="card-body text-center p-4">
+                <div class="rounded-circle bg-primary text-white d-inline-flex justify-content-center align-items-center mb-3 shadow" style="width: 80px; height: 80px; font-size: 2rem; font-weight: 700;">
+                    {{ student.full_name[0] }}
+                </div>
+                <h4 class="fw-bold mb-1">{{ student.full_name }}</h4>
+                <p class="text-info mb-3"><i class="bi bi-mortarboard me-1"></i>{{ student.grade_level }}</p>
+                
+                <hr class="border-secondary mb-3">
+                
+                <div class="d-flex justify-content-between text-start mb-2">
+                    <span class="text-muted">Veli/İletişim:</span>
+                    <span class="text-light">{{ student.parent_contact or 'Yok' }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-start mb-2">
+                    <span class="text-muted">Ders Ücreti:</span>
+                    <span class="text-success fw-bold">₺{{ student.hourly_rate }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-start mb-2">
+                    <span class="text-muted">Standart Süre:</span>
+                    <span class="text-light">{{ student.default_duration }} dk</span>
+                </div>
+                
+                {% if pending_balance > 0 %}
+                <div class="mt-4 p-3 bg-danger bg-opacity-10 rounded border border-danger border-opacity-50 text-center">
+                    <small class="text-danger d-block mb-1">Bekleyen Bakiye</small>
+                    <h3 class="text-danger fw-bold mb-0">₺{{ pending_balance }}</h3>
+                </div>
+                {% else %}
+                <div class="mt-4 p-3 bg-success bg-opacity-10 rounded border border-success border-opacity-50 text-center">
+                    <small class="text-success d-block mb-1">Bekleyen Bakiye</small>
+                    <h4 class="text-success fw-bold mb-0">Borç Yok</h4>
+                </div>
+                {% endif %}
+                
+                {% if student.notes %}
+                <div class="mt-4 text-start">
+                    <small class="text-muted d-block mb-1">Özel Notlar:</small>
+                    <p class="text-light" style="font-size: 0.9rem;">{{ student.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Zaman Tüneli (Geçmiş Dersler) -->
+    <div class="col-md-8">
+        <div class="card bg-dark border-secondary shadow-sm">
+            <div class="card-header border-secondary bg-transparent d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-journal-text text-primary me-2"></i>Ders Geçmişi (Karne)</h5>
+                <span class="badge bg-secondary rounded-pill">Toplam: {{ stats.total_lessons }} Planlanan</span>
+            </div>
+            <div class="card-body p-0">
+                {% if lessons %}
+                <div class="list-group list-group-flush">
+                    {% for lesson in lessons %}
+                    <div class="list-group-item bg-dark border-secondary p-4">
+                        <div class="d-flex w-100 justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0 fw-bold text-light">
+                                <i class="bi bi-calendar2-day me-2 text-muted"></i>{{ lesson.lesson_date.replace('T', ' ') }}
+                            </h6>
+                            {% if lesson.status == 'planlandi' %}
+                            <span class="badge bg-primary rounded-pill px-3">Planlandı</span>
+                            {% elif lesson.status == 'yapildi' %}
+                            <span class="badge bg-success rounded-pill px-3">Yapıldı</span>
+                            {% else %}
+                            <span class="badge bg-danger rounded-pill px-3">İptal</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if lesson.topic %}
+                        <p class="mb-1 text-info mt-2"><strong class="text-muted me-1">Konu:</strong> {{ lesson.topic }}</p>
+                        {% endif %}
+                        
+                        {% if lesson.homework %}
+                        <p class="mb-1 text-warning"><strong class="text-muted me-1">Ödev:</strong> {{ lesson.homework }}</p>
+                        {% endif %}
+                        
+                        {% if lesson.notes %}
+                        <div class="mt-2 p-2 bg-black bg-opacity-25 rounded border-start border-3 border-secondary text-light" style="font-size: 0.9rem;">
+                            {{ lesson.notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                    Bu öğrenci için henüz planlanmış bir ders bulunmuyor.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
